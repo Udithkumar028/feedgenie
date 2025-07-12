@@ -1,4 +1,5 @@
 const express = require('express');
+const cors = require('cors'); // 🔥 Allow cross-origin requests
 const fs = require('fs');
 const path = require('path');
 const Sentiment = require('sentiment');
@@ -6,13 +7,12 @@ const Sentiment = require('sentiment');
 const app = express();
 const sentiment = new Sentiment();
 
-// Check and use dynamic or fallback port
-const PORT = process.env.PORT || 3001;
-
-app.use(express.json());
+// ✅ Middlewares
+app.use(cors()); // 🔓 Allow frontend access from other domains (like Render)
+app.use(express.json()); // 🧠 Parse incoming JSON
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Submit feedback + sentiment analysis
+// ✅ Submit feedback + sentiment analysis
 app.post('/submit', (req, res) => {
   const feedback = req.body.feedback;
   const result = sentiment.analyze(feedback);
@@ -39,7 +39,7 @@ app.post('/submit', (req, res) => {
   res.json({ message: `✅ Feedback recorded as ${sentimentLabel}` });
 });
 
-// Get all feedback for dashboard
+// ✅ Retrieve all feedback entries
 app.get('/all', (req, res) => {
   const dbPath = path.join(__dirname, '../feedback.json');
   let data = [];
@@ -49,13 +49,14 @@ app.get('/all', (req, res) => {
   res.json(data);
 });
 
-// Start server with error catch
+// ✅ Start server
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`🚀 FeedGenie running at http://localhost:${PORT}`);
+  console.log(`🚀 FeedGenie backend live at http://localhost:${PORT}`);
 }).on('error', err => {
   if (err.code === 'EADDRINUSE') {
     console.error(`❌ Port ${PORT} is already in use.`);
-    console.log('💡 Try changing the PORT number or kill the running process.');
+    console.log('💡 Try changing the PORT number or stop other running apps.');
   } else {
     console.error('Server Error:', err);
   }
