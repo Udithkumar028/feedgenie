@@ -5,14 +5,15 @@ const path = require('path');
 const Sentiment = require('sentiment');
 
 const app = express();
-const sentiment = new Sentiment();
 const PORT = process.env.PORT || 3001;
+const sentiment = new Sentiment();
+const dbPath = path.join(__dirname, '../feedback.json');
 
 app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../public')));
 
-// 🔥 Submit feedback + fallback multilingual logic
+// Submit feedback + sentiment analysis
 app.post('/submit', (req, res) => {
   const feedback = req.body.feedback;
   const result = sentiment.analyze(feedback);
@@ -28,47 +29,48 @@ app.post('/submit', (req, res) => {
     timestamp: new Date().toISOString()
   };
 
-  const dbPath = path.join(__dirname, '../feedback.json');
   let data = [];
-
   if (fs.existsSync(dbPath)) {
-    try {
-      data = JSON.parse(fs.readFileSync(dbPath));
-    } catch (err) {
-      console.error('⚠️ Error reading feedback.json:', err);
-    }
+    data = JSON.parse(fs.readFileSync(dbPath));
   }
-
   data.push(entry);
   fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
 
-  res.json({ message: `✅ ✅ Feedback recorded as ${sentimentLabel}` });
+  res.json({ message: `✅ Feedback recorded as ${sentimentLabel}` });
 });
 
-// 📊 Get all feedback
+// Get all feedbacks (for dashboard)
 app.get('/all', (req, res) => {
-  const dbPath = path.join(__dirname, '../feedback.json');
   let data = [];
-
   if (fs.existsSync(dbPath)) {
-    try {
-      data = JSON.parse(fs.readFileSync(dbPath));
-    } catch (err) {
-      console.error('⚠️ Error reading feedback.json:', err);
-    }
+    data = JSON.parse(fs.readFileSync(dbPath));
   }
-
   res.json(data);
 });
 
-// 🚀 Start
+// Delete specific feedback
+app.delete('/delete/:index', (req, res) => {
+  const index = parseInt(req.params.index);
+  let data = [];
+  if (fs.existsSync(dbPath)) {
+    data = JSON.parse(fs.readFileSync(dbPath));
+  }
+  if (index >= 0 && index < data.length) {
+    data.splice(index, 1);
+    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+    res.json({ message: '🗑️ Feedback deleted.' });
+  } else {
+    res.status(400).json({ error: 'Invalid index' });
+  }
+});
+
+// Reset all feedbacks
+app.delete('/reset', (req, res) => {
+  fs.writeFileSync(dbPath, JSON.stringify([], null, 2));
+  res.json({ message: '🔁 All feedbacks reset.' });
+});
+
+// Start server
 app.listen(PORT, () => {
   console.log(`🚀 FeedGenie running at http://localhost:${PORT}`);
-}).on('error', err => {
-  if (err.code === 'EADDRINUSE') {
-    console.error(`❌ Port ${PORT} is already in use.`);
-    console.log('💡 Change the port or kill the process.');
-  } else {
-    console.error('Server Error:', err);
-  }
 });
