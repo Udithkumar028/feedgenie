@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FeedGenie Dashboard</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f4f4f4; }
+    h1 { color: #333; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 10px; text-align: left; }
+    th { background: #0077ff; color: white; }
+    .positive { color: green; }
+    .neutral { color: #555; }
+    .negative { color: red; }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h1>📊 Feedback Dashboard</h1>
+  <p>Total: <span id="total">0</span> | 
+     😊 Positive: <span id="pos">0</span> | 
+     😐 Neutral: <span id="neu">0</span> | 
+     😠 Negative: <span id="neg">0</span></p>
+     <canvas id="sentimentPie" width="400" height="200"></canvas>
+     <canvas id="scoreChart" width="400" height="200"></canvas>
+     
+  <table>
+    <thead>
+      <tr>
+        <th>Feedback</th>
+        <th>Sentiment</th>
+        <th>Score</th>
+        <th>Time</th>
+      </tr>
+    </thead>
+    <tbody id="data-body"></tbody>
+  </table>
+
+  <script>
+    async function loadData() {
+      const res = await fetch('/all');
+      const data = await res.json();
+
+      document.getElementById('total').innerText = data.length;
+      let pos = 0, neu = 0, neg = 0;
+      const body = document.getElementById('data-body');
+      body.innerHTML = '';
+
+      data.forEach(entry => {
+        const row = document.createElement('tr');
+
+        const sentimentClass = entry.sentiment.toLowerCase();
+
+        row.innerHTML = `
+          <td>${entry.feedback}</td>
+          <td class="${sentimentClass}">${entry.sentiment}</td>
+          <td>${entry.score}</td>
+          <td>${new Date(entry.timestamp).toLocaleString()}</td>
+        `;
+        body.appendChild(row);
+
+        if (entry.sentiment === 'Positive') pos++;
+        else if (entry.sentiment === 'Neutral') neu++;
+        else neg++;
+      });
+
+      document.getElementById('pos').innerText = pos;
+      document.getElementById('neu').innerText = neu;
+      document.getElementById('neg').innerText = neg;
+      
+      drawCharts(data);
+    }
+
+    loadData();
+    setInterval(loadData, 3000); // Refresh every 3 sec
+    let pieChart, barChart;
+
+function drawCharts(data) {
+  const pos = data.filter(d => d.sentiment === 'Positive').length;
+  const neu = data.filter(d => d.sentiment === 'Neutral').length;
+  const neg = data.filter(d => d.sentiment === 'Negative').length;
+
+  const labels = data.map((d, i) => `#${i + 1}`);
+  const scores = data.map(d => d.score);
+
+  // Pie Chart
+  if (pieChart) pieChart.destroy();
+  pieChart = new Chart(document.getElementById('sentimentPie'), {
+    type: 'pie',
+    data: {
+      labels: ['Positive', 'Neutral', 'Negative'],
+      datasets: [{
+        data: [pos, neu, neg],
+        backgroundColor: ['green', 'gray', 'red'],
+      }]
+    }
+  });
+
+  // Bar Chart
+  if (barChart) barChart.destroy();
+  barChart = new Chart(document.getElementById('scoreChart'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Sentiment Score',
+        data: scores,
+        backgroundColor: scores.map(s => s > 0 ? 'green' : s < 0 ? 'red' : 'gray')
+      }]
+    },
+    options: {
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+}
+  </script>
+</body>
+</html>

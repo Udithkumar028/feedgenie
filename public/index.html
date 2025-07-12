@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>FeedGenie</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>📝 Feedback Collector</h1>
+    <textarea id="feedback" placeholder="Enter your feedback..."></textarea>
+    <button onclick="submitFeedback()">Submit</button>
+    <div id="response"></div>
+  </div>
+  <script>
+    async function submitFeedback() {
+      const feedback = document.getElementById('feedback').value;
+      const res = await fetch('/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedback }),
+      });
+      const data = await res.json();
+      document.getElementById('response').innerText = data.message;
+    }
+  </script>
+</body>
+</html>

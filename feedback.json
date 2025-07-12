@@ -1,0 +1,14 @@
+[
+  {
+    "feedback": "Hey Alex, I noticed the marketing report was submitted a day late this week. I know you’ve been juggling a lot, but timely delivery is really important so the design team has enough time to review it. Is there anything I can help with to make sure we stay on schedule next time?",
+    "sentiment": "Positive",
+    "score": 4,
+    "timestamp": "2025-07-12T06:32:34.506Z"
+  },
+  {
+    "feedback": "You’re always late with your work. You need to get it together.",
+    "sentiment": "Neutral",
+    "score": 0,
+    "timestamp": "2025-07-12T06:42:44.171Z"
+  }
+]
