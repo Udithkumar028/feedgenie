@@ -2,57 +2,28 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>FeedGenie - Submit Feedback</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-    }
-    textarea {
-      width: 100%;
-      height: 100px;
-    }
-    button {
-      padding: 10px 20px;
-      margin-top: 10px;
-    }
-  </style>
+  <title>FeedGenie</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <h1>📝 Submit Your Feedback</h1>
-  <form id="feedback-form">
-    <textarea id="feedback" placeholder="Write your feedback here..." required></textarea><br>
-    <button type="submit">Submit</button>
-  </form>
-  <div id="status" style="margin-top: 10px; font-weight: bold;"></div>
+  <textarea id="feedbackBox" placeholder="Type here..."></textarea>
+  <button onclick="submitFeedback()">Submit</button>
+  <p id="response"></p>
+  <a href="dashboard.html">📊 View Dashboard</a>
 
   <script>
-    const form = document.getElementById('feedback-form');
-    const feedbackInput = document.getElementById('feedback');
-    const statusDiv = document.getElementById('status');
+    async function submitFeedback() {
+      const feedback = document.getElementById('feedbackBox').value;
+      const res = await fetch('https://feedgenie-backend.onrender.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ feedback })
+      });
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const feedback = feedbackInput.value.trim();
-      if (!feedback) return;
-
-      try {
-        const res = await fetch('https://feedgenie-backend.onrender.com/submit', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({ feedback })
-        });
-
-        const data = await res.json();
-        statusDiv.textContent = '✅ ' + data.message;
-        feedbackInput.value = '';
-      } catch (error) {
-        console.error(error);
-        statusDiv.textContent = '❌ Failed to submit feedback.';
-      }
-    });
+      const data = await res.json();
+      document.getElementById('response').textContent = data.message;
+    }
   </script>
 </body>
 </html>

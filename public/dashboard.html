@@ -1,55 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>FeedGenie - Dashboard</title>
-  <style>
-    body {
-      font-family: sans-serif;
-      padding: 20px;
-    }
-    h1 {
-      margin-bottom: 20px;
-    }
-    .feedback {
-      border: 1px solid #ccc;
-      padding: 12px;
-      margin-bottom: 10px;
-      border-radius: 8px;
-      background: #f9f9f9;
-    }
-  </style>
+  <meta charset="UTF-8" />
+  <title>Feedback Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>📊 Feedback Dashboard</h1>
-  <div id="feedbackList">Loading...</div>
+  <h1>📈 Feedback Sentiment Dashboard</h1>
+  <canvas id="sentimentChart" width="400" height="400"></canvas>
 
   <script>
-    async function loadFeedbacks() {
-      try {
-        const res = await fetch('https://feedgenie-backend.onrender.com/feedbacks');
-        const data = await res.json();
+    async function loadChart() {
+      const res = await fetch('https://feedgenie-backend.onrender.com/all');
+      const data = await res.json();
 
-        const list = document.getElementById('feedbackList');
-        list.innerHTML = '';
+      const sentimentCounts = { Positive: 0, Negative: 0, Neutral: 0 };
+      data.forEach(item => sentimentCounts[item.sentiment]++);
 
-        if (data.length === 0) {
-          list.innerHTML = '<p>No feedback yet.</p>';
-          return;
+      new Chart(document.getElementById('sentimentChart'), {
+        type: 'pie',
+        data: {
+          labels: ['Positive', 'Negative', 'Neutral'],
+          datasets: [{
+            data: [
+              sentimentCounts.Positive,
+              sentimentCounts.Negative,
+              sentimentCounts.Neutral
+            ],
+            backgroundColor: ['#4CAF50', '#F44336', '#9E9E9E']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { position: 'bottom' } }
         }
-
-        data.reverse().forEach((fb, i) => {
-          const div = document.createElement('div');
-          div.className = 'feedback';
-          div.innerHTML = `<strong>#${data.length - i}:</strong> ${fb.feedback}`;
-          list.appendChild(div);
-        });
-      } catch (err) {
-        document.getElementById('feedbackList').innerHTML = 'Failed to load feedbacks.';
-      }
+      });
     }
 
-    loadFeedbacks();
+    loadChart();
   </script>
 </body>
 </html>
