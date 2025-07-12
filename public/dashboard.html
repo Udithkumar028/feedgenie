@@ -2,62 +2,54 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>FeedGenie - Feedback Dashboard</title>
+  <title>FeedGenie - Dashboard</title>
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
     }
-    table {
-      border-collapse: collapse;
-      width: 100%;
+    h1 {
+      margin-bottom: 20px;
     }
-    th, td {
-      padding: 8px;
+    .feedback {
       border: 1px solid #ccc;
-    }
-    th {
-      background-color: #f4f4f4;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      background: #f9f9f9;
     }
   </style>
 </head>
 <body>
   <h1>📊 Feedback Dashboard</h1>
-  <table>
-    <thead>
-      <tr>
-        <th>Feedback</th>
-        <th>Sentiment</th>
-        <th>Score</th>
-        <th>Timestamp</th>
-      </tr>
-    </thead>
-    <tbody id="feedback-table">
-      <tr><td colspan="4">Loading...</td></tr>
-    </tbody>
-  </table>
+  <div id="feedbackList">Loading...</div>
 
   <script>
-    async function loadFeedback() {
-      const res = await fetch('https://feedgenie-backend.onrender.com/all');
-      const data = await res.json();
+    async function loadFeedbacks() {
+      try {
+        const res = await fetch('https://feedgenie-backend.onrender.com/feedbacks');
+        const data = await res.json();
 
-      const table = document.getElementById('feedback-table');
-      table.innerHTML = '';
+        const list = document.getElementById('feedbackList');
+        list.innerHTML = '';
 
-      data.reverse().forEach(entry => {
-        const row = document.createElement('tr');
-        row.innerHTML = `
-          <td>${entry.feedback}</td>
-          <td>${entry.sentiment}</td>
-          <td>${entry.score}</td>
-          <td>${new Date(entry.timestamp).toLocaleString()}</td>
-        `;
-        table.appendChild(row);
-      });
+        if (data.length === 0) {
+          list.innerHTML = '<p>No feedback yet.</p>';
+          return;
+        }
+
+        data.reverse().forEach((fb, i) => {
+          const div = document.createElement('div');
+          div.className = 'feedback';
+          div.innerHTML = `<strong>#${data.length - i}:</strong> ${fb.feedback}`;
+          list.appendChild(div);
+        });
+      } catch (err) {
+        document.getElementById('feedbackList').innerHTML = 'Failed to load feedbacks.';
+      }
     }
 
-    loadFeedback();
+    loadFeedbacks();
   </script>
 </body>
 </html>
