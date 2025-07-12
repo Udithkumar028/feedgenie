@@ -40,7 +40,7 @@
     const API_BASE = 'https://feedgenie-backend.onrender.com';
     
     async function loadData() {
-      const res = await fetch(`${API_BASE}/all`);
+      const res = await fetch('https://feedgenie-backend.onrender.com/all');
       const data = await res.json();
 
       document.getElementById('total').innerText = data.length;

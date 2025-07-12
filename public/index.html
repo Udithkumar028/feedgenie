@@ -8,23 +8,32 @@
 <body>
   <div class="container">
     <h1>📝 Feedback Collector</h1>
-    <textarea id="feedback" placeholder="Enter your feedback..."></textarea>
-    <button onclick="submitFeedback()">Submit</button>
+    <form>
+      <textarea id="feedback" placeholder="Enter your feedback..."></textarea>
+      <button type="submit">Submit</button>
+    </form>
     <div id="response"></div>
   </div>
   <script>
-    const API_BASE = 'https://feedgenie-backend.onrender.com';
-    
-    async function submitFeedback() {
-      const feedback = document.getElementById('feedback').value;
-      const res = await fetch(`${API_BASE}/submit`, {
+    const form = document.querySelector('form');
+    const feedbackInput = document.getElementById('feedback');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const feedback = feedbackInput.value;
+
+      const res = await fetch('https://feedgenie-backend.onrender.com/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ feedback })
       });
+
       const data = await res.json();
-      document.getElementById('response').innerText = data.message;
-    }
+      alert(data.message);
+      feedbackInput.value = '';
+    });
   </script>
 </body>
 </html>
