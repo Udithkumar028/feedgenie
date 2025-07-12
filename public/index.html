@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>FeedGenie - Submit Feedback</title>
   <style>
     body {
@@ -20,31 +20,38 @@
 </head>
 <body>
   <h1>📝 Submit Your Feedback</h1>
-  <form>
+  <form id="feedback-form">
     <textarea id="feedback" placeholder="Write your feedback here..." required></textarea><br>
     <button type="submit">Submit</button>
   </form>
+  <div id="status" style="margin-top: 10px; font-weight: bold;"></div>
 
   <script>
-    const form = document.querySelector('form');
+    const form = document.getElementById('feedback-form');
     const feedbackInput = document.getElementById('feedback');
+    const statusDiv = document.getElementById('status');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const feedback = feedbackInput.value.trim();
       if (!feedback) return;
 
-      const res = await fetch('https://feedgenie-backend.onrender.com/submit', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ feedback })
-      });
+      try {
+        const res = await fetch('https://feedgenie-backend.onrender.com/submit', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ feedback })
+        });
 
-      const data = await res.json();
-      alert(data.message);
-      feedbackInput.value = '';
+        const data = await res.json();
+        statusDiv.textContent = '✅ ' + data.message;
+        feedbackInput.value = '';
+      } catch (error) {
+        console.error(error);
+        statusDiv.textContent = '❌ Failed to submit feedback.';
+      }
     });
   </script>
 </body>
