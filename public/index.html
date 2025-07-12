@@ -13,12 +13,14 @@
     <div id="response"></div>
   </div>
   <script>
+    const API_BASE = 'https://feedgenie-backend.onrender.com';
+    
     async function submitFeedback() {
       const feedback = document.getElementById('feedback').value;
-      const res = await fetch('/submit', {
+      const res = await fetch(`${API_BASE}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ feedback }),
+        body: JSON.stringify({ feedback })
       });
       const data = await res.json();
       document.getElementById('response').innerText = data.message;
