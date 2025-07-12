@@ -2,43 +2,132 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Feedback Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FeedGenie Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <h1>📈 Feedback Sentiment Dashboard</h1>
-  <canvas id="sentimentChart" width="400" height="400"></canvas>
+  <h1>📊 FeedGenie Sentiment Dashboard</h1>
+
+  <div style="margin-bottom: 10px;">
+    <button onclick="loadFeedback()">🔃 Manual Refresh</button>
+    <button onclick="resetFeedbacks()">🔁 Reset All Feedbacks</button>
+    <button onclick="exportToExcel()">📄 Export to Excel</button>
+    <button onclick="window.print()">🖨️ Export to PDF</button>
+  </div>
+
+  <div id="feedback-list"></div>
+
+  <canvas id="pieChart" width="400" height="400"></canvas>
+  <canvas id="timeChart" width="600" height="300"></canvas>
 
   <script>
-    async function loadChart() {
+    async function loadFeedback() {
       const res = await fetch('https://feedgenie-backend.onrender.com/all');
       const data = await res.json();
 
-      const sentimentCounts = { Positive: 0, Negative: 0, Neutral: 0 };
-      data.forEach(item => sentimentCounts[item.sentiment]++);
+      document.getElementById('feedback-list').innerHTML = data.map((fb, index) => `
+        <div style="border-left: 6px solid ${colorFor(fb.sentiment)}; padding: 8px; margin: 8px;">
+          <strong>#${index + 1} ${customLabel(fb.sentiment, fb.score)}</strong><br>
+          <b>📝 Feedback:</b> ${fb.feedback}<br>
+          <b>🕒 Time:</b> ${new Date(fb.timestamp).toLocaleString()}<br>
+          <b>🌐 Location:</b> ${fb.location || 'Unknown'}<br>
+          <b>🧭 User Agent:</b> ${fb.userAgent || 'Not Shared'}<br>
+          <b>🤖 AI Reply:</b> ${generateAIReply(fb.sentiment, fb.feedback)}<br>
+          <button onclick="deleteFeedback(${index})">🗑️ Delete</button>
+        </div>`).join('');
 
-      new Chart(document.getElementById('sentimentChart'), {
+      const pieData = { Good: 0, Bad: 0, Normal: 0, Awesome: 0 };
+      const timeMap = {};
+
+      data.forEach(fb => {
+        const label = customLabel(fb.sentiment, fb.score);
+        pieData[label]++;
+        const hour = new Date(fb.timestamp).getHours();
+        if (!timeMap[hour]) timeMap[hour] = { Good: 0, Bad: 0, Normal: 0, Awesome: 0 };
+        timeMap[hour][label]++;
+      });
+
+      new Chart(document.getElementById('pieChart'), {
         type: 'pie',
         data: {
-          labels: ['Positive', 'Negative', 'Neutral'],
+          labels: Object.keys(pieData),
           datasets: [{
-            data: [
-              sentimentCounts.Positive,
-              sentimentCounts.Negative,
-              sentimentCounts.Neutral
-            ],
-            backgroundColor: ['#4CAF50', '#F44336', '#9E9E9E']
+            data: Object.values(pieData),
+            backgroundColor: ['green', 'red', 'orange', 'blue']
           }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { position: 'bottom' } }
+        }
+      });
+
+      const times = Object.keys(timeMap).sort((a, b) => +a - +b);
+      const series = ['Good', 'Bad', 'Normal', 'Awesome'];
+
+      new Chart(document.getElementById('timeChart'), {
+        type: 'line',
+        data: {
+          labels: times,
+          datasets: series.map(label => ({
+            label,
+            data: times.map(hour => timeMap[hour][label] || 0),
+            borderColor: colorFor(label),
+            fill: false
+          }))
         }
       });
     }
 
-    loadChart();
+    function colorFor(label) {
+      return {
+        Good: 'green',
+        Bad: 'red',
+        Normal: 'orange',
+        Awesome: 'blue',
+        Positive: 'green',
+        Negative: 'red',
+        Neutral: 'gray'
+      }[label] || 'gray';
+    }
+
+    function customLabel(sentiment, score) {
+      if (sentiment === 'Positive') return score > 4 ? 'Awesome' : 'Good';
+      if (sentiment === 'Negative') return 'Bad';
+      return 'Normal';
+    }
+
+    async function deleteFeedback(index) {
+      await fetch(`https://feedgenie-backend.onrender.com/delete/${index}`, { method: 'DELETE' });
+      alert('🗑️ Feedback deleted.');
+      loadFeedback();
+    }
+
+    async function resetFeedbacks() {
+      const confirmReset = confirm('Are you sure you want to reset all feedbacks?');
+      if (!confirmReset) return;
+      await fetch(`https://feedgenie-backend.onrender.com/reset`, { method: 'DELETE' });
+      alert('🔁 All feedbacks reset.');
+      loadFeedback();
+    }
+
+    function generateAIReply(sentiment, feedback) {
+      if (sentiment === 'Positive') return "Thank you for your great feedback! 🙌";
+      if (sentiment === 'Negative') return "Sorry to hear that. We’ll work on it! 😔";
+      return "Thanks for your thoughts! 😊";
+    }
+
+    function exportToExcel() {
+      fetch('https://feedgenie-backend.onrender.com/all')
+        .then(res => res.json())
+        .then(data => {
+          const worksheet = XLSX.utils.json_to_sheet(data);
+          const workbook = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(workbook, worksheet, "Feedbacks");
+          XLSX.writeFile(workbook, "feedbacks.xlsx");
+        });
+    }
+
+    loadFeedback();
   </script>
 </body>
 </html>
