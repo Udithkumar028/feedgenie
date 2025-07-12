@@ -2,28 +2,71 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>FeedGenie</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>📝 Submit Your Feedback</h1>
-  <textarea id="feedbackBox" placeholder="Type here..."></textarea>
-  <button onclick="submitFeedback()">Submit</button>
-  <p id="response"></p>
-  <a href="dashboard.html">📊 View Dashboard</a>
+  <div class="container">
+    <h1>FeedGenie 💡</h1>
+    <textarea id="feedback" placeholder="Enter your feedback in any language..."></textarea>
+    <button onclick="submitFeedback()">Submit</button>
+    <p id="response"></p>
+
+    <h2>📋 All Feedback</h2>
+    <ul id="feedbackList"></ul>
+
+    <canvas id="sentimentChart" width="400" height="200"></canvas>
+  </div>
 
   <script>
     async function submitFeedback() {
-      const feedback = document.getElementById('feedbackBox').value;
+      const feedback = document.getElementById('feedback').value;
       const res = await fetch('https://feedgenie-backend.onrender.com/submit', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({ feedback })
       });
-
       const data = await res.json();
-      document.getElementById('response').textContent = data.message;
+      document.getElementById('response').innerText = data.message;
+      document.getElementById('feedback').value = '';
+      loadFeedback(); // Auto-refresh
     }
+
+    async function loadFeedback() {
+      const res = await fetch('https://feedgenie-backend.onrender.com/all');
+      const data = await res.json();
+      const list = document.getElementById('feedbackList');
+      list.innerHTML = '';
+      let counts = { Positive: 0, Negative: 0, Neutral: 0 };
+
+      data.forEach(entry => {
+        const li = document.createElement('li');
+        li.textContent = `[${entry.sentiment}] ${entry.feedback}`;
+        list.appendChild(li);
+        counts[entry.sentiment]++;
+      });
+
+      drawChart(counts);
+    }
+
+    function drawChart(counts) {
+      const ctx = document.getElementById('sentimentChart').getContext('2d');
+      if (window.sentimentChart) window.sentimentChart.destroy();
+      window.sentimentChart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: ['Positive', 'Negative', 'Neutral'],
+          datasets: [{
+            data: [counts.Positive, counts.Negative, counts.Neutral],
+            backgroundColor: ['#4caf50', '#f44336', '#ffeb3b']
+          }]
+        }
+      });
+    }
+
+    loadFeedback();
   </script>
 </body>
 </html>
