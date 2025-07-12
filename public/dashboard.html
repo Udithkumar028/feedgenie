@@ -1,22 +1,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FeedGenie Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+    <button onclick="resetFeedbacks()">🔁 Reset All Feedbacks</button>
   <h1>📊 FeedGenie Sentiment Dashboard</h1>
 
-  <div style="margin-bottom: 10px;">
-    <button onclick="loadFeedback()">🔃 Manual Refresh</button>
-    <button onclick="resetFeedbacks()">🔁 Reset All Feedbacks</button>
-    <button onclick="exportToExcel()">📄 Export to Excel</button>
-    <button onclick="window.print()">🖨️ Export to PDF</button>
-  </div>
+  <button onclick="loadFeedback()">🔄 Refresh</button>
+  <button onclick="resetFeedbacks()">🔁 Reset All Feedbacks</button>
+  <button onclick="exportExcel()">📄 Export to Excel</button>
 
   <div id="feedback-list"></div>
 
@@ -28,17 +25,71 @@
       const res = await fetch('https://feedgenie-backend.onrender.com/all');
       const data = await res.json();
 
-      document.getElementById('feedback-list').innerHTML = data.map((fb, index) => `
-        <div style="border-left: 6px solid ${colorFor(fb.sentiment)}; padding: 8px; margin: 8px;">
-          <strong>#${index + 1} ${customLabel(fb.sentiment, fb.score)}</strong><br>
-          <b>📝 Feedback:</b> ${fb.feedback}<br>
-          <b>🕒 Time:</b> ${new Date(fb.timestamp).toLocaleString()}<br>
-          <b>🌐 Location:</b> ${fb.location || 'Unknown'}<br>
-          <b>🧭 User Agent:</b> ${fb.userAgent || 'Not Shared'}<br>
-          <b>🤖 AI Reply:</b> ${generateAIReply(fb.sentiment, fb.feedback)}<br>
-          <button onclick="deleteFeedback(${index})">🗑️ Delete</button>
-        </div>`).join('');
+      const hidden = JSON.parse(localStorage.getItem('hiddenFeedbacks') || '[]');
+      const visibleData = data.filter((_, i) => !hidden.includes(i));
 
+      document.getElementById('feedback-list').innerHTML = visibleData.map((fb, index) => `
+        <div style="border-left: 6px solid ${colorFor(fb.sentiment)}; padding: 8px; margin: 8px;">
+          <strong>#${index + 1} ${customLabel(fb.sentiment, fb.score)}</strong> — ${fb.feedback}<br>
+          <small>${new Date(fb.timestamp).toLocaleString()}</small><br>
+          <em>${fb.ip || '🌍 Unknown'} | ${fb.userAgent || '📱 Unknown Device'}</em><br>
+          <button onclick="deleteFeedback(${index}, 'everyone')">🗑️ Delete for Everyone</button>
+          <button onclick="deleteFeedback(${index}, 'me')">🙈 Delete for Me</button>
+        </div>
+      `).join('');
+
+      drawCharts(visibleData);
+    }
+
+    function colorFor(label) {
+      return {
+        Good: 'green',
+        Bad: 'red',
+        Normal: 'orange',
+        Awesome: 'blue',
+        Positive: 'green',
+        Negative: 'red',
+        Neutral: 'gray'
+      }[label] || 'gray';
+    }
+
+    function customLabel(sentiment, score) {
+      if (sentiment === 'Positive') return score > 4 ? 'Awesome' : 'Good';
+      if (sentiment === 'Negative') return 'Bad';
+      return 'Normal';
+    }
+
+    function deleteFeedback(index, mode) {
+      if (mode === 'me') {
+        let hidden = JSON.parse(localStorage.getItem('hiddenFeedbacks') || '[]');
+        hidden.push(index);
+        localStorage.setItem('hiddenFeedbacks', JSON.stringify([...new Set(hidden)]));
+        loadFeedback();
+        return;
+      }
+
+      if (confirm('⚠️ Delete this feedback for everyone?')) {
+        fetch(`https://feedgenie-backend.onrender.com/delete/${index}`, { method: 'DELETE' })
+          .then(() => {
+            alert('✅ Deleted for everyone');
+            loadFeedback();
+          });
+      }
+    }
+
+    async function resetFeedbacks() {
+      if (!confirm('🔁 Reset all feedbacks for everyone?')) return;
+      await fetch(`https://feedgenie-backend.onrender.com/reset`, { method: 'DELETE' });
+      localStorage.removeItem('hiddenFeedbacks');
+      alert('✅ All feedbacks reset.');
+      loadFeedback();
+    }
+
+    function exportExcel() {
+      window.open('https://feedgenie-backend.onrender.com/export');
+    }
+
+    function drawCharts(data) {
       const pieData = { Good: 0, Bad: 0, Normal: 0, Awesome: 0 };
       const timeMap = {};
 
@@ -76,55 +127,6 @@
           }))
         }
       });
-    }
-
-    function colorFor(label) {
-      return {
-        Good: 'green',
-        Bad: 'red',
-        Normal: 'orange',
-        Awesome: 'blue',
-        Positive: 'green',
-        Negative: 'red',
-        Neutral: 'gray'
-      }[label] || 'gray';
-    }
-
-    function customLabel(sentiment, score) {
-      if (sentiment === 'Positive') return score > 4 ? 'Awesome' : 'Good';
-      if (sentiment === 'Negative') return 'Bad';
-      return 'Normal';
-    }
-
-    async function deleteFeedback(index) {
-      await fetch(`https://feedgenie-backend.onrender.com/delete/${index}`, { method: 'DELETE' });
-      alert('🗑️ Feedback deleted.');
-      loadFeedback();
-    }
-
-    async function resetFeedbacks() {
-      const confirmReset = confirm('Are you sure you want to reset all feedbacks?');
-      if (!confirmReset) return;
-      await fetch(`https://feedgenie-backend.onrender.com/reset`, { method: 'DELETE' });
-      alert('🔁 All feedbacks reset.');
-      loadFeedback();
-    }
-
-    function generateAIReply(sentiment, feedback) {
-      if (sentiment === 'Positive') return "Thank you for your great feedback! 🙌";
-      if (sentiment === 'Negative') return "Sorry to hear that. We’ll work on it! 😔";
-      return "Thanks for your thoughts! 😊";
-    }
-
-    function exportToExcel() {
-      fetch('https://feedgenie-backend.onrender.com/all')
-        .then(res => res.json())
-        .then(data => {
-          const worksheet = XLSX.utils.json_to_sheet(data);
-          const workbook = XLSX.utils.book_new();
-          XLSX.utils.book_append_sheet(workbook, worksheet, "Feedbacks");
-          XLSX.writeFile(workbook, "feedbacks.xlsx");
-        });
     }
 
     loadFeedback();
